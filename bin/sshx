@@ -1,0 +1,134 @@
+#!/bin/bash
+#
+# ssh into server(s) by typing part of the server names, based on configuration list full server names.
+# The full server names are read from either the SSHX_SERVERS environment variable or the -s switch.
+# Patterns are matched against those server names, to choose one or more servers to connect to.
+# Or connect to them all using the -a switch.
+#
+# Example setup in your profile script:
+#  export SSHX_SERVERS=$(cat $HOME/.servers | grep -v '^#')
+#   or
+#  alias myssh='sshx -d example.com -s "host1 host2 host3"'
+
+user=root
+domain=
+default_servers=$SSHX_SERVERS
+command=
+all=0
+
+usage() {
+  cat <<EOF >&2
+usage: $0 [-u <user>] [-d <domain>] [-s <servers>] <servers / patterns ...>
+  Specify server FQDNs with the -s option, or the SSHX_SERVERS environment
+  variable, to use patterns instead of FQDNs to connect to servers.
+
+  To connect to all servers in your server list, use the -a option instead
+  of providing patterns.
+EOF
+}
+
+while getopts ":u:d:s:hac:" opt; do
+  case $opt in
+    u)
+      user="$OPTARG"
+      ;;
+    d)
+      domain="$OPTARG"
+      ;;
+    s)
+      default_servers="$OPTARG"
+      ;;
+    h)
+      usage
+      exit 0
+      ;;
+    a)
+      all=1
+      ;;
+    c)
+      command="$OPTARG"
+      ;;
+    \?)
+      echo "Invalid option: -$OPTARG" >&2
+      ;;
+  esac
+done
+
+set -eu
+
+shift $((OPTIND-1))
+
+servers=$*
+if [ "x$servers" == "x" ]; then
+  if [ "x$default_servers" == "x" ]; then
+    echo "No servers specified with -s option or SSHX_SERVERS environment variable." >&2
+    exit 1
+  elif [ "x$all" == "x1" ]; then
+    servers=$default_servers
+  else
+    usage
+    exit 1
+  fi
+elif [ "x$all" == "x1" ]; then
+  echo "Do not provide the -a switch and server names"
+  exit 1
+elif [ "x$default_servers" != "x" ]; then
+  final_servers=
+  set +e
+
+  # Choose all names from $default_servers that match a name in $servers
+  for j in $default_servers ; do
+    for i in $servers ; do
+      #echo "CHECKING $i AND $j"
+      if [[ $j =~ (^|\.)$i ]]; then
+        final_servers="$final_servers $j"
+        break
+      fi
+    done
+  done
+
+  # Add in all names from $servers that don't match any of our $default_servers
+  for i in $servers ; do
+    found=0
+    for j in $default_servers ; do
+      if [[ $j =~ (^|\.)$i ]]; then
+        found=1
+        break
+      fi
+    done
+    if [ $found == 0 ] ; then
+      final_servers="$final_servers $i"
+    fi
+  done
+
+  set -e
+  servers=$final_servers
+fi
+
+qual_servers=""
+server_count=0
+for i in $servers ; do
+	server_count=$((server_count+1))
+
+  if [ "x$domain" != "x" ]; then
+    if [[ $i == *.* ]]; then
+      qual_servers="$qual_servers $i"
+    else
+      qual_servers="$qual_servers $i.$domain"
+    fi
+  else
+    qual_servers="$qual_servers $i"
+  fi
+done
+
+# Trim leading whitespace
+qual_servers=${qual_servers## }
+
+if [ $server_count -eq 0 ]; then
+  echo "usage: $0 [-u <user>] <server> [<server> ...]"
+  exit 1
+elif [ $server_count -eq 1 ]; then
+	ssh $user@$qual_servers "$command"
+else
+	csshX --login $user --remote_command "$command" $qual_servers
+fi
