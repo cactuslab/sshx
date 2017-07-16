@@ -18,7 +18,7 @@ all=0
 
 usage() {
   cat <<EOF >&2
-usage: $0 [-u <user>] [-d <domain>] [-s <servers>] <servers / patterns ...>
+usage: $0 [-u <user>] [-d <domain>] [-s <servers>] [-c <command>] <servers / patterns ...>
   Specify server FQDNs with the -s option, or the SSHX_SERVERS environment
   variable, to use patterns instead of FQDNs to connect to servers.
 
