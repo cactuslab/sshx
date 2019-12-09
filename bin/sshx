@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/bin/bash -eu
 #
 # ssh into server(s) by typing part of the server names, based on configuration list full server names.
 # The full server names are read from either the SSHX_SERVERS environment variable or the -s switch.
@@ -12,15 +12,16 @@
 
 user=root
 domain=
-default_servers=$SSHX_SERVERS
+default_servers=${SSHX_SERVERS:-}
 command=
 all=0
 
 usage() {
   cat <<EOF >&2
 usage: $0 [-u <user>] [-d <domain>] [-s <servers>] [-c <command>] <servers / patterns ...>
-  Specify server FQDNs with the -s option, or the SSHX_SERVERS environment
-  variable, to use patterns instead of FQDNs to connect to servers.
+
+  In order to connect using patterns, specify server FQDNs with the -s option (or the SSHX_SERVERS environment
+  variable). The format is space-separated: [alias=][user@]host
 
   To connect to all servers in your server list, use the -a option instead
   of providing patterns.
@@ -54,9 +55,15 @@ while getopts ":u:d:s:hac:" opt; do
   esac
 done
 
-set -eu
-
 shift $((OPTIND-1))
+
+# Case-insensitive regex matching in bash
+shopt -s nocasematch
+
+extract_user_and_server() {
+  # Remove the alias prefix, if any
+  echo ${1//*=/}
+}
 
 servers=$*
 if [ "x$servers" == "x" ]; then
@@ -80,7 +87,8 @@ elif [ "x$default_servers" != "x" ]; then
   for j in $default_servers ; do
     for i in $servers ; do
       #echo "CHECKING $i AND $j"
-      if [[ $j =~ (^|\.)$i ]]; then
+      if [[ $j =~ (^|\.|@|=)$i ]]; then
+        j=$(extract_user_and_server "$j")
         final_servers="$final_servers $j"
         break
       fi
@@ -91,12 +99,13 @@ elif [ "x$default_servers" != "x" ]; then
   for i in $servers ; do
     found=0
     for j in $default_servers ; do
-      if [[ $j =~ (^|\.)$i ]]; then
+      if [[ $j =~ (^|\.|@|=)$i ]]; then
         found=1
         break
       fi
     done
     if [ $found == 0 ] ; then
+      i=$(extract_user_and_server "$i")
       final_servers="$final_servers $i"
     fi
   done
@@ -128,7 +137,11 @@ if [ $server_count -eq 0 ]; then
   echo "usage: $0 [-u <user>] <server> [<server> ...]"
   exit 1
 elif [ $server_count -eq 1 ]; then
-	ssh $user@$qual_servers "$command"
+  if [[ $qual_servers == *@* ]]; then
+    ssh $qual_servers "$command"
+  else
+	  ssh $user@$qual_servers "$command"
+  fi
 else
 	csshX --login $user --remote_command "$command" $qual_servers
 fi
