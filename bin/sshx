@@ -119,6 +119,9 @@ server_count=0
 for i in $servers ; do
 	server_count=$((server_count+1))
 
+  # Remove alias from start of server e.g. <alias>=<server>
+  i=${i/#*=/}
+
   if [ "x$domain" != "x" ]; then
     if [[ $i == *.* ]]; then
       qual_servers="$qual_servers $i"
@@ -138,6 +141,7 @@ if [ $server_count -eq 0 ]; then
   exit 1
 elif [ $server_count -eq 1 ]; then
   if [[ $qual_servers == *@* ]]; then
+    # qual_servers already contains username
     ssh $qual_servers "$command"
   else
 	  ssh $user@$qual_servers "$command"
