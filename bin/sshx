@@ -15,6 +15,7 @@ domain=
 default_servers=${SSHX_SERVERS:-}
 command=
 all=0
+ssh_flags=
 
 usage() {
   cat <<EOF >&2
@@ -28,7 +29,7 @@ usage: $0 [-u <user>] [-d <domain>] [-s <servers>] [-c <command>] <servers / pat
 EOF
 }
 
-while getopts ":u:d:s:hac:" opt; do
+while getopts ":u:d:s:hac:v" opt; do
   case $opt in
     u)
       user="$OPTARG"
@@ -48,6 +49,9 @@ while getopts ":u:d:s:hac:" opt; do
       ;;
     c)
       command="$OPTARG"
+      ;;
+    v)
+      ssh_flags="$ssh_flags -v"
       ;;
     \?)
       echo "Invalid option: -$OPTARG" >&2
@@ -142,9 +146,9 @@ if [ $server_count -eq 0 ]; then
 elif [ $server_count -eq 1 ]; then
   if [[ $qual_servers == *@* ]]; then
     # qual_servers already contains username
-    ssh $qual_servers "$command"
+    ssh $ssh_flags $qual_servers "$command"
   else
-	  ssh $user@$qual_servers "$command"
+	  ssh $ssh_flags $user@$qual_servers "$command"
   fi
 else
 	csshX --login $user --remote_command "$command" $qual_servers
