@@ -10,7 +10,8 @@
 #   or
 #  alias myssh='sshx -d example.com -s "host1 host2 host3"'
 
-user=root
+default_user=${SSHX_USER:-root}
+user=
 domain=
 default_servers=${SSHX_SERVERS:-}
 command=
@@ -146,9 +147,13 @@ if [ $server_count -eq 0 ]; then
 elif [ $server_count -eq 1 ]; then
   if [[ $qual_servers == *@* ]]; then
     # qual_servers already contains username
-    ssh $ssh_flags $qual_servers "$command"
+    if [ -n "$user" ]; then
+      ssh $ssh_flags $user@${qual_servers/*@/} "$command"
+    else
+      ssh $ssh_flags $qual_servers "$command"
+    fi
   else
-	  ssh $ssh_flags $user@$qual_servers "$command"
+	  ssh $ssh_flags ${user:-$default_user}@$qual_servers "$command"
   fi
 else
 	csshX --login $user --remote_command "$command" $qual_servers

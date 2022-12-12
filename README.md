@@ -21,3 +21,9 @@ or
 # or one with `myssh host2`
 alias myssh='sshx -d example.com -s "host1 host2 host3"'
 ```
+
+## Users
+
+Set a default user to connect with using the `SSHX_USER` environment variable, which defaults to `root`.
+
+You can also include a username in the server definition, e.g. `user@host`.
