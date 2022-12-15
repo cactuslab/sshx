@@ -156,5 +156,5 @@ elif [ $server_count -eq 1 ]; then
 	  ssh $ssh_flags ${user:-$default_user}@$qual_servers "$command"
   fi
 else
-	csshX --login $user --remote_command "$command" $qual_servers
+	csshX --login ${user:-$default_user} --remote_command "$command" $qual_servers
 fi
