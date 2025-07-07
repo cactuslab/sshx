@@ -1,0 +1,21 @@
+#compdef sshx
+
+_sshx() {
+	local -a servers
+	servers=(${(s: :)SSHX_SERVERS})  # Split SSHX_SERVERS on spaces
+
+	_arguments -C \
+		'1:server name:->servers' \
+		'*::args:->args'
+
+	case $state in
+		servers)
+		_describe -t servers 'Servers' servers
+		;;
+		args)
+		_describe -t servers 'Servers' servers
+		;;
+	esac
+}
+
+compdef _sshx sshx
