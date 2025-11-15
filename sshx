@@ -144,17 +144,19 @@ qual_servers=${qual_servers## }
 if [ $server_count -eq 0 ]; then
   echo "usage: $0 [-u <user>] <server> [<server> ...]"
   exit 1
-elif [ $server_count -eq 1 ]; then
-  if [[ $qual_servers == *@* ]]; then
-    # qual_servers already contains username
-    if [ -n "$user" ]; then
-      ssh $ssh_flags $user@${qual_servers/*@/} "$command"
+elif [ $server_count -eq 1 ] || [ -n "$command" ]; then
+  for qual_server in $qual_servers ; do
+    if [[ $qual_server == *@* ]]; then
+      # qual_server already contains username
+      if [ -n "$user" ]; then
+        ssh $ssh_flags $user@${qual_server/*@/} "$command"
+      else
+        ssh $ssh_flags $qual_server "$command"
+      fi
     else
-      ssh $ssh_flags $qual_servers "$command"
+      ssh $ssh_flags ${user:-$default_user}@$qual_server "$command"
     fi
-  else
-	  ssh $ssh_flags ${user:-$default_user}@$qual_servers "$command"
-  fi
+  done
 else
 	csshX --login ${user:-$default_user} --remote_command "$command" $qual_servers
 fi
