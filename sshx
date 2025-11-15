@@ -65,6 +65,9 @@ shift $((OPTIND-1))
 # Case-insensitive regex matching in bash
 shopt -s nocasematch
 
+GREEN="\033[1;32m"
+NOCOLOR="\033[0m"
+
 extract_user_and_server() {
   # Remove the alias prefix, if any
   echo ${1//*=/}
@@ -149,11 +152,14 @@ elif [ $server_count -eq 1 ] || [ -n "$command" ]; then
     if [[ $qual_server == *@* ]]; then
       # qual_server already contains username
       if [ -n "$user" ]; then
+        echo -e "${GREEN}Connecting to ${qual_server/*@/} as $user${NOCOLOR}" >&2
         ssh $ssh_flags $user@${qual_server/*@/} "$command"
       else
+        echo -e "${GREEN}Connecting to ${qual_server/*@/} as ${qual_server/@*/}${NOCOLOR}" >&2
         ssh $ssh_flags $qual_server "$command"
       fi
     else
+      echo -e "${GREEN}Connecting to ${qual_server/*@/} as ${user:-$default_user}${NOCOLOR}" >&2
       ssh $ssh_flags ${user:-$default_user}@$qual_server "$command"
     fi
   done
